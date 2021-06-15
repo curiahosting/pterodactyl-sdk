@@ -1,0 +1,8 @@
+{
+    "name": "curia/pterodactyl-sdk",
+    "description": "PHP API for Pterodactyl Panel",
+    "require": {
+        "php": ">=7.4",
+        "guzzlehttp/guzzle": "7.*"
+    }
+}
