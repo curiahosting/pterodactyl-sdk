@@ -1,8 +1,26 @@
 {
-    "name": "curia/pterodactyl-sdk",
+    "name": "curiahosting/pterodactyl-sdk",
     "description": "PHP API for Pterodactyl Panel",
+    "keywords": ["pterosdk", "pterodactyl", "sdk", "php"],
+    "authors": [
+        {
+            "name": "Luke Davis",
+            "email": "admin@curiahosting.co.za"
+        }
+    ],
+    "license": "MIT",
     "require": {
         "php": ">=7.4",
         "guzzlehttp/guzzle": "7.*"
-    }
+    },
+    "require-dev": {
+        "mockery/mockery": "0.9.*",
+        "phpunit/phpunit": "9.5.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Curia\\PteroSDK\\": "src/"
+        }
+    },
+    "prefer-stable": true
 }
