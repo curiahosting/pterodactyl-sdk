@@ -5,25 +5,27 @@ namespace Curia\PteroSDK\Resources;
 use Curia\PteroSDK\Exceptions\FieldNotPresentException;
 use Curia\PteroSDK\Exceptions\FieldRequiredException;
 use Curia\PteroSDK\Exceptions\FieldTypeException;
+use Curia\PteroSDK\Exceptions\IncorrectAPIException;
 use Curia\PteroSDK\Requester;
 use Curia\PteroSDK\ResponseParser;
 
-class Resource
+abstract class Resource
 {
     protected $requester;
-    protected $base_path;
+    protected $api_type;
+    protected $meta;
     
     /**
      * You should not call this function directly.
      *
      * @param Requester $requester
-     * @param string $base_path
      * @param array $data
+     * @param string $api_type
      */
-    public function __construct(Requester $requester, string $base_path, array $data)
+    public function __construct(Requester $requester, string $api_type, array $data)
     {
         $this->requester = $requester;
-        $this->base_path = $base_path;
+        $this->api_type = $api_type;
 
         $this->update($data);
     }
@@ -33,11 +35,23 @@ class Resource
         $parser = new ResponseParser();
 
         foreach ($data['attributes'] as $key => $value) {
-            $this->{$key} = $parser->parse($this->requester, $this->base_path, $value);
+            $this->{$key} = $parser->parse($this->requester, $this->api_type, $value);
+        }
+        
+        if (key_exists('meta', $data)) {
+            $this->meta = $parser->parse($this->requester, $this->api_type, $data['meta']);
         }
     }
 
-    protected function validate_fields(array $fields, array $rules) {
+    protected function force_api_type(string $api_type)
+    {
+        if ($this->api_type != $api_type) {
+            throw new IncorrectAPIException($api_type);
+        }
+    }
+
+    protected function validate_fields(array $fields, array $rules)
+    {
         foreach ($rules as $field => $field_rules) {
             foreach ($field_rules as $rule) {
                 $rule_parts = explode(':', $rule);
@@ -159,5 +173,15 @@ class Resource
             return true;
         }
         return is_null($value);
+    }
+
+    /**
+     * Returns objects "meta" object, or null if it doesn't exist.
+     *
+     * @return array|null
+     */
+    public function meta()
+    {
+        return $this->meta ?? null;
     }
 }

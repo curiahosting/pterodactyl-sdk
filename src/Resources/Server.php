@@ -2,10 +2,16 @@
 
 namespace Curia\PteroSDK\Resources;
 
+use Curia\PteroSDK\Exceptions\InvalidPowerSignalException;
+
 class Server extends Resource
 {
+    ///////////////////////////////////////////
+    //////// APPLICATION API FUNCTIONS ////////
+    ///////////////////////////////////////////
+
     /**
-     * Updates the server details, overwrites self with response
+     * `[APPLICATION API]` Updates the server details, overwrites self with response.
      *
      * @param array $fields
      * @return void
@@ -18,7 +24,7 @@ class Server extends Resource
      * | `external_id`  |           | string    | External ID of the server                     |
      * | `description`  |           | string    | Description of the server                     |
      * 
-     * ### Example
+     * ### Examples
      * ```php
      * $server->details([
      *     'name' => 'My Server',
@@ -36,6 +42,8 @@ class Server extends Resource
      */
     public function details(array $fields)
     {
+        $this->force_api_type('application');
+
         $this->validate_fields($fields, [
             'name' => ['required', 'string'],
             'user' => ['required', 'number'],
@@ -43,11 +51,11 @@ class Server extends Resource
             'description' => ['string'],
         ]);
 
-        $this->requester->patch($this->base_path."/servers/{$this->id}/details", $fields);
+        $this->update($this->requester->patch("/servers/{$this->id}/details", $fields));
     }
 
     /**
-     * Updates the server build information, overwrites self with response
+     * `[APPLICATION API]` Updates the server build information, overwrites self with response.
      *
      * @param array $fields
      * @return void
@@ -69,7 +77,7 @@ class Server extends Resource
      * 
      * Alternatively place `memory`, `swap`, `io`, `cpu`, and `disk` into an associative array, `limits`, in much the same way as `feature_limts`.
      * 
-     * ### Example
+     * ### Examples
      * ```php
      * $server->build([
      *     'allocation' => 3,
@@ -106,6 +114,8 @@ class Server extends Resource
      */
     public function build(array $fields)
     {
+        $this->force_api_type('application');
+
         $this->validate_fields($fields, [
             'allocation' => ['required', 'number'],
             
@@ -129,13 +139,11 @@ class Server extends Resource
             'feature_limits.allocations' => ['number'],
         ]);
 
-        $this->requester->patch($this->base_path."/servers/{$this->id}/build", $fields);
+        $this->update($this->requester->patch("/servers/{$this->id}/build", $fields));
     }
 
     /**
-     */
-    /**
-     * Updates the server startup information
+     * `[APPLICATION API]` Updates the server startup information.
      *
      * @param array $fields
      * @return void
@@ -149,7 +157,7 @@ class Server extends Resource
      * | image          | required  | string                            | The Docker image to use for this server                                           |
      * | skip_scripts   | present   | required                          | If enabled, if the Egg has an install script, it will NOT be ran during install.  |
      * 
-     * ### Example
+     * ### Examples
      * ```php
      * $server->startup([
      *     'startup' => 'java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar {{SERVER_JARFILE}}',
@@ -173,6 +181,8 @@ class Server extends Resource
      */
     public function startup(array $fields)
     {
+        $this->force_api_type('application');
+
         $this->validate_fields($fields, [
             'startup' =>        ['required', 'string'],
             'environment' =>    ['present', 'object'],
@@ -181,36 +191,178 @@ class Server extends Resource
             'skip_scripts' =>   ['present', 'boolean'],
         ]);
 
-        $this->requester->patch($this->base_path."/servers/{$this->id}/startup", $fields);
+        $this->update($this->requester->patch("/servers/{$this->id}/startup", $fields));
     }
 
     /**
-     * Suspends the server
+     * `[APPLICATION API]` Suspends the server.
      *
      * @return void
      */
     public function suspend()
     {
-        $this->requester->post($this->base_path."/servers/{$this->id}/suspend");
+        $this->force_api_type('application');
+
+        $this->requester->post("/servers/{$this->id}/suspend");
     }
 
     /**
-     * Unsuspends the server
+     * `[APPLICATION API]` Unsuspends the server.
      *
      * @return void
      */
     public function unsuspend()
     {
-        $this->requester->post($this->base_path."/servers/{$this->id}/unsuspend");
+        $this->force_api_type('application');
+
+        $this->requester->post("/servers/{$this->id}/unsuspend");
     }
 
     /**
-     * Reinstalls the server
+     * `[APPLICATION API]` Reinstalls the server.
      *
      * @return void
      */
     public function reinstall()
     {
-        $this->requester->post($this->base_path."/servers/{$this->id}/reinstall");
+        $this->force_api_type('application');
+
+        $this->requester->post("/servers/{$this->id}/reinstall");
+    }
+
+    ///////////////////////////////////////////
+    //////// CLIENT API FUNCTIONS ////////
+    ///////////////////////////////////////////
+
+    /**
+     * `[CLIENT API]` Generates credentials to establish a websocket.
+     *
+     * @return array In the format:
+     * 
+     * ### Examples
+     * ```json
+     * {
+     *   "data": {
+     *     "token": "...",
+     *     "socket": "wss:\/\/node.example.com:8080\/api\/servers\/...\/ws"
+     *   }
+     * }
+     * ```
+     */
+    public function websocket()
+    {
+        $this->force_api_type('client');
+
+        return $this->requester->get("/servers/{$this->uuid}/websocket");
+    }
+
+    /**
+     * `[CLIENT API]` Retrieves resource utilisation of the specified server.
+     *
+     * @return Stats
+     */
+    public function resources()
+    {
+        $this->force_api_type('client');
+
+        return new Stats($this->requester, $this->api_type, $this->requester->get("/servers/{$this->uuid}/resources"));
+    }
+
+    /**
+     * `[CLIENT API]` Returns 'current_state' from server resource utilisation.
+     *
+     * @return string Either 'running', 'offline', 'starting', or 'stopping'
+     */
+    public function current_state()
+    {
+        $this->force_api_type('client');
+
+        return $this->resources()->current_state;
+    }
+
+    /**
+     * `[CLIENT API]` Sends a command to the server.
+     *
+     * @param string $command
+     * 
+     * @return void
+     */
+    public function command(string $command)
+    {
+        $this->force_api_type('client');
+
+        $this->requester->post("/servers/{$this->uuid}/command", [
+            'command' => $command,
+        ]);
+    }
+
+    /**
+     * `[CLIENT API]` Sends a power signal to the server.
+     *
+     * @param string $signal 'start', 'stop', 'restart', or 'kill'
+     * 
+     * @return void
+     */
+    public function power(string $signal)
+    {
+        $this->force_api_type('client');
+
+        $power_signals = ['start', 'stop', 'restart', 'kill'];
+
+        if (!in_array($signal, $power_signals)) {
+            throw new InvalidPowerSignalException($signal, $power_signals);
+        }
+
+        $this->requester->post("/servers/{$this->uuid}/power", [
+            'signal' => $signal,
+        ]);
+    }
+
+    /**
+     * `[CLIENT API]` Sends a 'start' power signal to the server.
+     * 
+     * @return void
+     */
+    public function start()
+    {
+        $this->force_api_type('client');
+        
+        $this->power('start');
+    }
+
+    /**
+     * `[CLIENT API]` Sends a 'stop' power signal to the server.
+     * 
+     * @return void
+     */
+    public function stop()
+    {
+        $this->force_api_type('client');
+        
+        $this->power('stop');
+    }
+
+    /**
+     * `[CLIENT API]` Sends a 'restart' power signal to the server.
+     * 
+     * @return void
+     */
+    public function restart()
+    {
+        $this->force_api_type('client');
+        
+        $this->power('restart');
+    }
+
+    /**
+     * `[CLIENT API]` Sends a 'kill' power signal to the server.
+     * 
+     * @return void
+     */
+    public function kill()
+    {
+        $this->force_api_type('client');
+        
+        $this->power('kill');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Curia\PteroSDK;
 
+use Curia\PteroSDK\Exceptions\BadGatewayException;
 use Curia\PteroSDK\Exceptions\BadRequestException;
 use Curia\PteroSDK\Exceptions\InternalServerException;
 use Curia\PteroSDK\Exceptions\UnauthorisedException;
@@ -68,6 +69,9 @@ class Requester {
                 case 500:
                     $error_str = json_encode(json_decode($response->getBody()->getContents()), JSON_PRETTY_PRINT);
                     throw new InternalServerException($error_str);
+                case 502:
+                    $error_str = json_encode(json_decode($response->getBody()->getContents()), JSON_PRETTY_PRINT);
+                    throw new BadGatewayException($error_str);
                 default:
                     throw $e;
             }
